@@ -47,7 +47,7 @@ mod readline {
 
     pub fn add_function(name: &[u8], function: lib::rl_command_func_t) -> ::DynlibResult<()> {
         let name = std::ffi::CString::new(name).unwrap();
-        unsafe{ (*lib::rl_add_funmap_entry)?(name.as_ptr(), function) };
+        unsafe{ (*lib::rl_add_funmap_entry)?(name.as_ptr() as *const i8, function) };
         // readline now owns the string
         std::mem::forget(name);
         Ok(())
@@ -55,8 +55,8 @@ mod readline {
 
     pub fn tilde_expand(string: &str) -> ::DynlibResult<String> {
         let string = std::ffi::CString::new(string).unwrap();
-        let string = unsafe{ (*lib::tilde_expand)?(string.as_ptr()) };
-        let string = unsafe{ std::ffi::CString::from_raw(string) }.into_string();
+        let string = unsafe{ (*lib::tilde_expand)?(string.as_ptr() as *const i8) };
+        let string = unsafe{ std::ffi::CString::from_raw(string as *mut u8) }.into_string();
         string.map_err(|_| "tilde_expand: invalid utf-8")
     }
 
@@ -95,7 +95,7 @@ fn add_function(name: &str, path: &str) -> DynlibResult<()> {
 #[no_mangle]
 pub extern fn rl_parse_and_bind(string: *mut i8) -> isize {
     if ! string.is_null() {
-        let string = unsafe{ std::ffi::CStr::from_ptr(string) }.to_str().unwrap();
+        let string = unsafe{ std::ffi::CStr::from_ptr(string as *const u8) }.to_str().unwrap();
         let mut parts = string.trim_start().splitn(4, char::is_whitespace);
         let directive = parts.next().unwrap_or("");
         let plugin = parts.next().unwrap_or("");
